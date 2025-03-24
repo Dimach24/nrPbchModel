@@ -1,16 +1,7 @@
-function result = polarDecoding(bits)
-    % polarDecoding Procedure of polar decoding and deinterleving [7.1.4, TS 38.212]
-    % [TS 38.212 clause 7.1.4] -> [TS 38.212 clause 5.3.1.2]
-    arguments
-        bits (1,512) % PolarCode - input coded sequence of bits
-    end
-
-    N = 512;        % input sequence length
-    K = 56;         % output sequence length
-    
-    % just algo from 5.3.1.2 of TS 38.212
-    % Q_I_N definition table 5.3.1.2-1
-    Q_0_Nmax = nrCom.PolarSequenceReliability; 
+function pld=polarDecoding(likehood_ratios)
+    K = 56;
+    N = 512;
+    Q_0_Nmax = nrCom.PolarSequenceReliability;
     j = 1;
     for i = 1:1024
         if Q_0_Nmax(i)<N
@@ -22,37 +13,70 @@ function result = polarDecoding(bits)
         end
     end
     Q_I_N = Q_0_N((end-K+1):end);
-    
-    % G_N matrix definition
-    G_2 = ones(2, 2);
-    G_2(1, 2) = 0;
-    G_N = G_2;
-    Power=log2(N);
-    for i=1:Power-1
-        G_N = kron(G_2, G_N);
-    end
-    
-    u=mod(bits/G_N,2); % u definiton
-    
-    % main procedure
-    result = zeros(1,56); 
-    k=0;
-    for n = 0:(N-1)
-        if ismember(n, Q_I_N)
-            result(k+1) = u(n+1);
-            k = k + 1;
-            if k > K
-                break
-            end
+
+    likehood_ratios=likehood_ratios(bitrevorder(1:N));
+    decision=nan(1,N);
+    K=56; % payload size
+    pld=nan(1,K);
+    n=log2(N)+1;
+    k=1;
+    for i=1:N
+        if ismember(i-1,Q_I_N)
+            lr=calculateLikehood(likehood_ratios,i,decision);
+            decision(i)=lr<1;
+            pld(k)=decision(i);
+            k=k+1;
+        else
+            decision(i)=0;
         end
-    end 
-    result=deinterleave(result);
+    end
+    pld=deinterleave(pld);
+end
+
+
+function lr= calculateLikehood(LR,i,u)
+    N=length(LR);
+    if N==1 % channel-layer
+        lr=LR;
+    else
+        if mod(i,2)==1 %i is odd
+            uo=u(1:2:i-1); % odd subvector
+            ue=u(2:2:i-1); % even subvector
+            % fprintf("fa\t%2d\n",N/2)
+            a=calculateLikehood(LR(1:N/2),(i+1)/2,xor(ue,uo));
+            % fprintf("fb\t%2d\n",N/2)
+            b=calculateLikehood(LR(N/2+1:N),(i+1)/2,ue);
+            lr=f(a,b);
+        else % i is even
+            uo=u(1:2:i-2); % odd subvector
+            ue=u(2:2:i-2); % even subvector
+            % fprintf("ga\t%2d\n",N/2)
+            a=calculateLikehood(LR(1:N/2),i/2,xor(ue,uo));
+            % fprintf("gb\t%2d\n",N/2)
+            b=calculateLikehood(LR(N/2+1:N),i/2,ue);
+            lr=g(u(i-1),a,b);
+        end
+    end
+    % fprintf("return\t%2d\n",N);
+end
+
+function res=f(a,b)
+    res=(1+a*b)/(a+b);
+end
+function res=g(s,a,b)
+    if length(s)~=1
+        error("s must be a scalar")
+    end
+    if isnan(s)
+        error("s must be not NaN")
+    end
+    res=a.^(1-2*s)*b;
 end
 
 function out_seq = deinterleave(bits)
-    % deinterleave process of reverse interleaving 
+    % deinterleave process of reverse interleaving
     % after polar decoding [7.1.4, TS 38.212]
-    
+
     arguments
         bits (1,:) % sequence of bits
     end
@@ -60,15 +84,7 @@ function out_seq = deinterleave(bits)
     % initializing
     K = length(bits);
     out_seq = zeros(1,length(bits));
-    INTERLEAVING_PATTERN = [0 2 4 7 9 14 19 20 24 25 26 28 31 34 42 45 ...
-    49 50 51 53 54 56 58 59 61 62 65 66 67 69 70 71 72 76 77 81 82 83  ...
-    87 88 89 91 93 95 98 101 104 106 108 110 111 113 115 118 119 120   ...
-    122 123 126 127 129 132 134 138 139 140 1 3 5 8 10 15 21 27 29 32  ...
-    35 43 46 52 55 57 60 63 68 73 78 84 90 92 94 96 99 102 105 107 109 ...
-    112 114 116 121 124 128 130 133 135 141 6 11 16 22 30 33 36 44 47  ...
-    64 74 79 85 97 100 103 117 125 131 136 142 12 17 23 37 48 75 80 86 ...
-    137 143 13 18 38 144 39 145 40 146 41 147 148 149 150 151 152 153  ...
-    154 155 156 157 158 159 160 161 162 163]; %TS 38.212 table 5.3.1.1-1
+    INTERLEAVING_PATTERN = nrCom.PolarCodingInterleaverPattern;
     k = 0;
     for m = 0:163
         if INTERLEAVING_PATTERN(1+m) >= 164 - K
@@ -76,12 +92,9 @@ function out_seq = deinterleave(bits)
             k = k+1;
         end
     end
-    
+
     % main procedure
-    for i = 1:K 
-    out_seq(INTERLEAVING_PATTERN(i)+1) = bits(i);
+    for i = 1:K
+        out_seq(INTERLEAVING_PATTERN(i)+1) = bits(i);
     end
 end
-
-
-
