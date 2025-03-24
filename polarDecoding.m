@@ -1,4 +1,72 @@
-function pld=polarDecoding(likehood_ratios)
+function pld=polarDecoding(likehood_ratios,L)
+    arguments
+        likehood_ratios 
+        L=1
+    end
+    if (L==1)
+        pld=SCD(likehood_ratios);
+        return
+    end
+    K = 56;
+    N = 512;
+    Q_0_Nmax = nrCom.PolarSequenceReliability;
+    j = 1;
+    for i = 1:1024
+        if Q_0_Nmax(i)<N
+            Q_0_N(j) = Q_0_Nmax(i);
+            j=j+1;
+            if j > N
+                break
+            end
+        end
+    end
+    Q_I_N = Q_0_N((end-K+1):end);
+
+    likehood_ratios=likehood_ratios(bitrevorder(1:N));
+
+    path_old=nan(1,N);
+    pm_old=[0];
+    for i=1:N
+        path_new=repmat(path_old,2,1);
+        pm_new=repmat(pm_old,2,1);
+        if ~ismember(i-1,Q_I_N)
+            path_old(:,i)=0;
+            continue
+        end
+        for p1=1:size(path_old,1) % calculating 2L paths
+            p2=p1+size(path_old,1);
+            path_new(p1,i)=0;
+            path_new(p2,i)=1;
+            lr=calculateLikehood(likehood_ratios,i,path_old(p1,:));
+            if lr<1
+                pm_new(p1)=pm_new(p1)+abs(log(lr));
+            else
+                pm_new(p2)=pm_new(p2)+abs(log(lr));
+            end
+        end
+        if size(pm_new,1)<=L
+            pm_old=pm_new;
+            path_old=path_new;
+            continue
+        end
+        [~,paths_to_live]=mink(pm_new,L);
+        path_old=path_new(paths_to_live,:);
+        pm_old=pm_new(paths_to_live);
+    end
+    [~,true_path]=min(pm_new);
+    u=path_new(true_path,:);
+    pld=nan(1,K);
+    k=1;
+    for i=1:N
+        if ismember(i-1,Q_I_N)
+            pld(k)=u(i);
+            k=1+k;
+        end
+    end
+    pld=deinterleave(pld);
+end
+
+function pld=SCD(likehood_ratios)
     K = 56;
     N = 512;
     Q_0_Nmax = nrCom.PolarSequenceReliability;
@@ -32,7 +100,6 @@ function pld=polarDecoding(likehood_ratios)
     end
     pld=deinterleave(pld);
 end
-
 
 function lr= calculateLikehood(LR,i,u)
     N=length(LR);
