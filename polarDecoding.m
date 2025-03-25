@@ -38,11 +38,9 @@ function pld=polarDecoding(likehood_ratios,L)
             path_new(p1,i)=0;
             path_new(p2,i)=1;
             lr=calculateLikehood(likehood_ratios,i,path_old(p1,:));
-            if lr<1
-                pm_new(p1)=pm_new(p1)+abs(log(lr));
-            else
-                pm_new(p2)=pm_new(p2)+abs(log(lr));
-            end
+            pm_new(p1)=pm_new(p1)+log(1/lr);
+            pm_new(p2)=pm_new(p2)+log(lr);
+            
         end
         if size(pm_new,1)<=L
             pm_old=pm_new;
