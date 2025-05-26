@@ -15,6 +15,7 @@ function [LR1, LR2]=awgnQpskLR(actual,sigma2)
     w02=awgnW(actual,qpskModulate([0 0]),sigma2)+awgnW(actual,qpskModulate([1 0]),sigma2);
     w11=awgnW(actual,qpskModulate([1 0]),sigma2)+awgnW(actual,qpskModulate([1 1]),sigma2);
     w12=awgnW(actual,qpskModulate([0 1]),sigma2)+awgnW(actual,qpskModulate([1 1]),sigma2);
+    disp(w01==1-w11)
     LR1=w01/w11;
     LR2=w02/w12;
 end
