@@ -1,9 +1,9 @@
-function bits = rateRecovery(bits)
+function softbits = rateRecovery(softbits)
     arguments
-        bits {mustBeVector,mustBeMember(bits,[0,1])}
+        softbits {mustBeVector}
     end
-    bits = bitSelection(bits);
-    bits = subBlockDeinterleaving(bits);
+    softbits = bitSelection(softbits);
+    softbits = subBlockDeinterleaving(softbits);
 end
 
 function out_seq = bitSelection(bits)
@@ -24,13 +24,13 @@ function out_seq = bitSelection(bits)
     end
     out_seq(1:E) = bits(1:E);
 end
-function out_seq = subBlockDeinterleaving(bits)
+function out_seq = subBlockDeinterleaving(softbits)
     % rateRecovery_subBlockDeinterleaving Procedure of sub-block
     % deinterleaving for reverse rate matching of PBCH receiver 
     % [TS 38.212, 5.4.1.1]
     % J is the matrix of indexes after sub-block interleaving
     arguments
-        bits {mustBeVector,mustBeMember(bits,[0,1])} % input sequence of bits
+        softbits {mustBeVector} % input sequence of bits
     end
     N = 512;
     J = zeros(1,N);
@@ -38,5 +38,5 @@ function out_seq = subBlockDeinterleaving(bits)
           23 24 25 26 28 27 29 30 31];  % interleaving pattern
     i = floor(32*(0:(N-1))/N);
     J(1:N)=P(i+1)*N/32+mod(0:(N-1), N/32);
-    out_seq(J(1:N)+1) = bits(1:N);      % main procedure
+    out_seq(J(1:N)+1) = softbits(1:N);      % main procedure
 end
