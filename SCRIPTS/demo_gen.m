@@ -29,4 +29,4 @@ mib.intraFreqReselection=nrCom.IntraFreqReselection.notAllowed;
 
 waveform=ofdmModulator(rg,NStart,round(log2(subcarrierSpacing/15)),0);
 
-waveform_n=awgn(waveform,-20,"measured");
+save waveform.mat waveform
