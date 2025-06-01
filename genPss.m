@@ -1,4 +1,4 @@
-function pss = genPss(Nid2)
+    function pss = genPss(Nid2)
     % generates PSS
     arguments
         Nid2 (1,1) {mustBeInteger,mustBeNonnegative}
