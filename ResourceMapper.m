@@ -18,8 +18,8 @@ classdef ResourceMapper<handle
         function  mapBlock(obj,pss,sss,pbch,pbch_dmrs,NCellId,k,l)
             arguments
                 obj ResourceMapper %self
-                pss {mustBeVector,mustBeMember(pss,[-1,1])}
-                sss {mustBeVector,mustBeMember(sss,[-1,1])}
+                pss {mustBeVector}
+                sss {mustBeVector}
                 pbch {mustBeVector}
                 pbch_dmrs {mustBeVector}
                 NCellId (1,1){mustBeInteger,mustBeInRange(NCellId,0,1007)}
@@ -32,8 +32,8 @@ classdef ResourceMapper<handle
         function mapSync(obj,pss,sss,k,l)
             arguments
                 obj ResourceMapper %self
-                pss {mustBeVector,mustBeMember(pss,[-1,1])}
-                sss {mustBeVector,mustBeMember(sss,[-1,1])}
+                pss {mustBeVector}
+                sss {mustBeVector}
                 k (1,1){mustBeInteger,mustBeNonnegative} % subcarrier 0
                 l (1,1){mustBeInteger,mustBeNonnegative} % ofdm symbol 0
             end
